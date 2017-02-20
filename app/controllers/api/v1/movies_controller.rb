@@ -111,7 +111,7 @@ module Api
                 vip: vip,
                 '4dx': i4dx,
                 '2d': i2d,
-                hours:  hours
+                hours: hours
               }
 
               sessions << session

@@ -76,62 +76,66 @@ module Api
         def parse_movie_theater(movie_theater_id)
           html = Nokogiri::HTML(open("http://www.cinepolis.com.br/programacao/cinema.php?cc=#{movie_theater_id}"))
 
+          # GET MOVIE DATA:
+          # http://www.cinepolis.com.br/programacao/busca.php?cidade=16&cc=16&cf=8344
+
           movie_theater = {
             name: html.css('.titulo .amarelo')[0].text,
-            city: html.css('.titulo .cinza .esquerda')[0].text,
-            weeks: []
+            location: html.css('.titulo .cinza .esquerda')[0].text,
+            movies: []
           }
 
-          weeks = []
-
-          html.css('.tabs3 .tabNavigation li').each do |item|
-            sessions = []
-
-            week = {
-              from: item.css('a')[0].text.split(' à ')[0],
-              to: item.css('a')[0].text.split(' à ')[1],
-              sessions: []
+          movies = []
+          
+          url = 'http://www.cinepolis.com.br/includes/getFilme.php'
+          response = HTTParty.post(url, {
+            body: {
+              type: '0',
+              cidade: movie_theater_id
             }
+          })
 
-            html.css("#{item.css('a')[0].attr('href')} tr").each do |line|
-              if line.attr('bgcolor') == '#990000'
-                movie_id = line.css('td')[1].css('a').last.attr('href').to_s.split('?cf=')[1].to_s.split('&cc=')[0]
-                subtitled = line.css('td')[4].text.include?('Leg') ? true : false
-                dubbed = line.css('td')[4].text.include?('Dub') ? true : false
+          html = Nokogiri::HTML(response)
 
-                hours = []
+          # loop each movie
+          html.css('option').each do |option|
 
-                line.css('td')[4].text.split(',').each do |option|
-                  hours << option.gsub(/[Leg,Dub,-,.,A]/, '').gsub('-', '').gsub(' ', '')
-                end
+            if option.attr('value') != '0'
 
+              html = Nokogiri::HTML(open("http://www.cinepolis.com.br/programacao/busca.php?cidade=#{movie_theater_id}&cc=16&cf=#{option["value"]}"))
+              trailer = Nokogiri::HTML(open(html.css('.linha2 .coluna1 a')[1].attr('href')))
 
-                session = {
-                  room: line.css('td')[0].text,
-                  movie: {
-                    name: line.css('td')[1].text,
-                    url: "#{request.protocol}#{request.host}:#{request.port}#{api_v1_movie_path(movie_id.to_i, format: :json)}",
-                    pg: line.css('td')[2].css('img')[0] ? line.css('td')[2].css('img')[0].attr('title').gsub(' anos', '') : false,
-                    subtitled: subtitled,
-                    dubbed: dubbed
-                  },
-                  hours: hours
+              movie = {
+                id: option.attr('value'),
+                name: option.text,
+                synopsis: html.css('.linha2 .coluna2 p')[0].text,
+                cast: html.css('.linha2 .coluna2 p')[1].text,
+                director: html.css('.linha2 .coluna2 p')[2].text,
+                classification: html.css('.titulo img')[0].attr('alt').gsub(/\D/, ''),
+                image: html.css('.linha2 .coluna1 img')[0].attr('src').gsub('medio', 'grande'),
+                trailer: trailer.css('iframe')[0].attr('src'),
+                remaining_days: []
+              }
+
+              remaining_days = []
+
+              html.css('.tabs3 .tabNavigation li').each do |li|
+                
+                day = {
+                  date: 'abc'
                 }
-
-                sessions << session
+                
+                remaining_days << day
               end
+
+              movies << movie
             end
-
-            week[:sessions] = sessions
-
-            weeks << week
           end
 
-          movie_theater[:weeks] = weeks
+          movie_theater[:movies] = movies
 
           return movie_theater
-        end
-        
+        end 
     end
   end
 end
