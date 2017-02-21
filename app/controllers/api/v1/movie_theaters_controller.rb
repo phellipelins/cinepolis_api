@@ -74,6 +74,17 @@ module Api
 
         # For show action
         def parse_movie_theater(movie_theater_id)
+          city_id = '16'
+
+          # movies_theaters = HTTParty.get('#{request.protocol}#{request.host}:#{request.port}#{api_v1_movie_theaters_path()}')
+
+          # movies_theaters.each do |movies_theater|
+          #   if movies_theater.id == movie_theater_id
+          #     city_id = movies_theater.city.id
+          #     break
+          #   end
+          # end
+
           html = Nokogiri::HTML(open("http://www.cinepolis.com.br/programacao/cinema.php?cc=#{movie_theater_id}"))
 
           movie_theater = {
@@ -99,7 +110,7 @@ module Api
 
             if option.attr('value') != '0'
 
-              html = Nokogiri::HTML(open("http://www.cinepolis.com.br/programacao/busca.php?cidade=#{movie_theater_id}&cc=#{movie_theater_id}&cf=#{option['value']}"))
+              html = Nokogiri::HTML(open("http://www.cinepolis.com.br/programacao/busca.php?cidade=16&cc=#{movie_theater_id}&cf=#{option['value']}"))
               trailer = Nokogiri::HTML(open(html.css('.linha2 .coluna1 a')[1].attr('href')))
 
               movie = {
