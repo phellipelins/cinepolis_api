@@ -76,7 +76,7 @@ module Api
         def parse_movie_theater(movie_theater_id)
           city_id = '16'
 
-          # movies_theaters = HTTParty.get('#{request.protocol}#{request.host}:#{request.port}#{api_v1_movie_theaters_path()}')
+          # movies_theaters = HTTParty.get('#{request.protocol}#{request.host}:#{request.port}#{api_v1_cities_path()}')
 
           # movies_theaters.each do |movies_theater|
           #   if movies_theater.id == movie_theater_id
@@ -110,13 +110,14 @@ module Api
 
             if option.attr('value') != '0'
 
-              html = Nokogiri::HTML(open("http://www.cinepolis.com.br/programacao/busca.php?cidade=16&cc=#{movie_theater_id}&cf=#{option['value']}"))
+              html = Nokogiri::HTML(open("http://www.cinepolis.com.br/programacao/busca.php?cidade=#{city_id}&cc=#{movie_theater_id}&cf=#{option['value']}"))
               trailer = Nokogiri::HTML(open(html.css('.linha2 .coluna1 a')[1].attr('href')))
+              synopsis = Nokogiri::HTML(open(html.css('.linha2 .coluna1 a')[0].attr('href')))
 
               movie = {
                 id: option.attr('value'),
                 name: option.text,
-                synopsis: html.css('.linha2 .coluna2 p')[0].text,
+                synopsis: synopsis.css('.conteudo .direita')[0].text[/Sinopse(.*?)Elenco/m, 1],
                 cast: html.css('.linha2 .coluna2 p')[1].text,
                 director: html.css('.linha2 .coluna2 p')[2].text,
                 classification: html.css('.titulo img')[0].attr('alt').gsub(/\D/, ''),
@@ -140,10 +141,38 @@ module Api
                 html.css("#{li.css('a')[0].attr('href')} table tr").each do |tr|
                   
                   if tr.attr('bgcolor') == '#990000'
+                    is3D = false
+                    typeRoom = 'standard'
+
+                    tr.css('td a').each do |link|
+                      
+                      if link.attr('class') == 'ico3d'
+                        is3D = true
+                      end
+
+                      if link.attr('class') == 'icovip'
+                        typeRoom = 'vip'
+                      end
+
+                      if link.attr('class') == 'icomacroxe'
+                        typeRoom = 'macroxe'
+                      end
+
+                      if link.attr('class') == 'icoimax'
+                        typeRoom = 'imax'
+                      end
+
+                      if link.attr('class') == 'ico4dx'
+                        typeRoom = '4dx'
+                      end
+
+                    end
                     
                     session = {
                       room: tr.css('td')[2].text,
                       subtitle: tr.css('td span[aria-label]')[0].attr('aria-label'),
+                      is3D: is3D,
+                      typeRoom: typeRoom,
                       schedules: []
                     }
 
